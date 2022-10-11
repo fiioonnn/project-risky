@@ -1,0 +1,18 @@
+html, body {
+	margin: 0;
+	height: 100vh;
+	color: #fff;
+	font-family: Montserrat;
+}
+
+body {
+	background: url($img_path + 'background.jpg') no-repeat center / cover;
+}
+
+*, *::after, *::before {
+	box-sizing: border-box;
+}
+
+* {
+	user-select: none;
+}

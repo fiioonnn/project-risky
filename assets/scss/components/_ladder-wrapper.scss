@@ -1,0 +1,89 @@
+.ladder-wrapper {
+	max-height: 100vh;
+	margin-left: auto;
+	padding: 10%;
+	max-width: fit-content;
+	overflow-y: auto;
+	-ms-overflow-style: none;  /* IE and Edge */
+	scrollbar-width: none;
+	scroll-behavior: smooth;
+	&:-webkit-scrollbar {
+		display: none;
+	}
+	&__ladder {
+		min-height: max-content;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		li {
+			border-radius: 10px;
+			background: linear-gradient(180deg, #C1790B 0%, #753A10 100%);
+			font-size: 2rem;
+			padding: 10px;
+			color: $gold;
+			
+			&:not(:last-child) {
+				margin-bottom: 5px;
+			}
+			p {
+				transition: .1s all;
+				background: black;
+				border-radius: 3px;
+				padding: 5px;
+				text-align: center;
+				font-weight: 700;
+				box-shadow: 0 0 0 3px rgba(#C1790B, .7);
+			}
+			span {
+				font-size: 70%;
+			}
+			&.fs-xxl {
+				font-size: 3.2rem;
+			}
+			&.fs-xl {
+				font-size: 3rem;
+			}
+			&.fs-l {
+				font-size: 2.5rem;
+			}
+			&.fs-m {
+				font-size: 2.2rem;
+			}
+			&.fs-text {
+				font-size: 1.2rem;
+				text-transform: uppercase;
+				p {
+					padding: 15px 0;
+				}
+			}
+			&.active > p{
+				background-color: $gold;
+				color: black;
+			}
+		}
+	}
+	@for $i from 1 through 15 {
+		&__ladder {
+			li {
+				&:nth-child(#{$i}) {
+					@if ($i == 1){ width: 280px; }
+					@else if ($i == 2){ width: 270px; }
+					@else if ($i == 3){ width: 250px; }
+					@else if ($i == 4){ width: 230px; }
+					@else if ($i == 5){ width: 220px; }
+					@else if ($i == 6){ width: 210px; }
+					@else if ($i == 7){ width: 200px; }
+					@else if ($i == 8){ width: 190px; }
+					@else if ($i == 9){ width: 180px; }
+					@else if ($i == 10){ width: 170px; }
+					@else if ($i == 11){ width: 160px; }
+					@else if ($i == 12){ width: 150px; }
+					@else if ($i == 13){ width: 140px; }
+					@else if ($i == 14){ width: 130px; }
+					@else if ($i == 15){ width: 120px; }
+				}
+			}
+		}
+	}
+}
+
