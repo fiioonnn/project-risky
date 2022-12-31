@@ -1,294 +1,420 @@
 class Risky {
-	constructor( settings = {} ) {
-		// dom
-		this.ladder 		= document.querySelector('#ladder')
-		this.ladderWrapper 	= document.querySelector('#ladder-wrapper')
-		this.tiles 			= ladder.querySelectorAll('li')
-		// debug
-		this.debugEnabled	= false
-		// cooldown
-		this.cooldown 		= false
-		this.cooldownTimer 	= null
-		// toggles
-		this.toggleTeaser	= false
-		// blocked input
-		this.blocked		= false
-		this.gameover		= false
-		// levels
-		this.levelIndex		= 1
-		this.level			= {
-			0: { active: 14, prev: 14, win: 14, loose: 14, amount: 0 },
-			1: { active: 13, prev: 14, win: 12, loose: 14, amount: 15 },
-			2: { active: 12, prev: 13, win: 11, loose: 14, amount: 30 },
-			3: { active: 11, prev: 12, win: 10, loose: 14, amount: 60 },
-			4: { active: 10, prev: 11, win: 9, loose: 14, amount: 120 },
-			5: { active: 9, prev: 10, win: 8, loose: 14, amount: 240 },
-			6: { active: 8, prev: 14, win: 8, loose: 8, amount: 'PLAYOUT' }, // AUSSPIELUNG
-			7: { active: 7, prev: 8, win: 6, loose: 14, amount: 400 },
-			8: { active: 6, prev: 7, win: 5, loose: 7, amount: 800 },
-			9: { active: 5, prev: 6, win: 4, loose: 6, amount: 1200 },
-			10: { active: 4, prev: 5, win: 3, loose: 5, amount: 2000 },
-			11: { active: 3, prev: 4, win: 2, loose: 4, amount: 3200 },
-			12: { active: 2, prev: 3, win: 1, loose: 3, amount: 5200 },
-			13: { active: 1, prev: 2, win: 0, loose: 2, amount: 8400 },
-			14: { active: 0, prev: 1, win: 0, loose: 0, amount: 14000 },
-		}
-		// audios
-		this.sounds			= {
-			toggle: './assets/audio/toggle.mp3',
-			teaseOne: './assets/audio/tease-one.mp3',
-			teaseTwo: './assets/audio/tease-two.mp3',
-			levelUp: './assets/audio/level-up.mp3',
-			levelDown: './assets/audio/level-down.mp3',
-			gameover: './assets/audio/gameover.mp3',
-			playout: './assets/audio/playout.mp3',
-			restart: './assets/audio/restart.mp3',
-			win: './assets/audio/win.mp3',
+	constructor() {
+		// DOM Elements
+		this.site = document.querySelector("#site");
+		this.ladderWrapper = document.querySelector("#ladderWrapper");
+		this.ladderLevels = Array.from(ladder.querySelectorAll("li")).reverse();
+		this.ladder = document.querySelector("#ladder");
+		// Booleans
+		this.blinkBoolOne = true;
+		this.blinkBoolSecond = false;
+		this.blinkCooldown = false;
+		this.locked = false;
+		this.statusIsVisible = false;
+		this.soundsEnabled = true;
+		this.jackpotBoolean = false;
+		this.jackpotInterval = null;
+		this.notGameOver = true;
+		this.controlsLocked = false;
+		this.soundsEnabled = true;
+		//
+		this.blinkSpeed = 200;
+		this.controlsCooldown = 200;
+		this.chance = 0.5;
 
-		}
-		this.soundsEnabled	= false
-		// game timer
-		this.gameTimer 		= null
-		// chance
-		this.chance			= 800
-		
-		this.initialize()
-	}
-	
-	initialize() {
-		this.timer()
-		this.controls()
-		this.debugTimer()
-		this.disableScrolling()
-		this.toggleSound()
-	}
-	
-	timer() {
-		this.gameTimer = setInterval(() => {
-			this.focus()
-			this.setState('select', this.level[ this.levelIndex ].active)
-			this.tease( this.level[ this.levelIndex ] )
-			// ranomize chance
-			
-			if(this.debugEnabled) {
-				this.chance = 1
-			} else {
-				this.chance = this.random(0, 1100)
-			}
-			// check win or loose
-			switch (this.levelIndex) {
-				case 14:
-					this.blocked = true
-					this.setState('select', 0)
-					clearInterval(this.gameTimer)
-					this.status('show', 'You won')
-					this.playSound('win')
-				break;
-				case 6:
-					clearInterval(this.gameTimer)
-					this.playout()
-					this.playSound('playout')
-				break;
-				case 0:
-					this.gameover = true
-					this.blocked = true
-					this.setState('select', 14)
-					clearInterval(this.gameTimer)
-					this.status('show', 'Game over')
-					this.playSound('gameover')
-				break;
-			}
-		}, 300)
-	}
-	
-	playout() {
-		this.ladderWrapper.scrollTo(0, 0)
-		this.blocked = true
-		this.animation(2)
-	}
-	
-	animation( repeat ) {
-		if(repeat == 0) {
-			if(this.random(0,100) > 85) {
-				this.levelIndex = this.random(7, 13)
-			} else {
-				this.levelIndex = 7
-			}
-			this.timer()
-			this.blocked = false
-			return
-		} else {
-			for (let i = 0; i < 9; i++ ){
-				setTimeout(() => { this.setState('select', (8 - i)) },  50 * i)
-			}
-			
-			setTimeout(() => {
-				for (let i = 0; i < 9; i++ ){
-					setTimeout(() => { this.setState('unselect', (8 - i)) },  50 * i)
-				}
-			}, 300)
-			setTimeout(() => {
-				return repeat * this.animation(repeat - 1)
-			}, 600)
-			
-		}
-	}
-	
-	setState( state, index ) {
-		switch (state) {
-			case 'select':
-			this.tiles[index].classList.add('active')
-			break;
-			case 'unselect':
-			this.tiles[index].classList.remove('active')
-			break;
-		}
-	}
-	
-	debugTimer() {
-		if(!this.debugEnabled) return
-		setInterval(() => {
-			document.querySelector('#dbg-current-level').innerHTML = this.level[this.levelIndex].active + '(' + this.level[this.levelIndex].amount + ')'
-			document.querySelector('#dbg-current-index').innerHTML = this.levelIndex
-			document.querySelector('#dbg-level-info').innerHTML = `[ W: ${this.level[this.levelIndex].win}, L: ${this.level[this.levelIndex].loose}, P: ${this.level[this.levelIndex].prev} ]`
-			document.querySelector('#dbg-cooldown').innerHTML = this.cooldown
-			document.querySelector('#dbg-tease').innerHTML = this.toggleTeaser
-			document.querySelector('#dbg-blocked').innerHTML = this.blocked
-			document.querySelector('#dbg-chance').innerHTML = this.chance
-		}, 50)
-	}
-
-	debug() {
-		this.debugEnabled = true
-		document.querySelector('#debug').style.display = "block"
-		this.debugTimer()
-		console.log("Debug enabled")
-	}
-	
-	tease( level ) {
-		if(!this.toggleTeaser) {
-			this.setState( 'select', level.win )
-			this.setState( 'unselect', level.loose )
-			this.toggleTeaser = true
-			this.playSound('teaseOne')
-		} else {
-			this.setState( 'select', level.loose )
-			this.setState( 'unselect', level.win )
-			this.toggleTeaser = false
-			this.playSound('teaseTwo')
-		}
-	}
-	
-	status( action, text ) {
-		var status = document.querySelector('#status')
-		var statusText = document.querySelector('#statusText')
-		var statusButton = document.querySelector('#statusButton')
-		
-		switch (action) {
-			case 'hide':
-
-			status.style.marginLeft = "-100%"
-			break;
-			case 'show':
-			status.style.marginLeft = "0"
-			statusText.innerText = text
-			statusButton.onclick = () => {
-				this.restart()
-			}
-			break;
-		}
-	}
-	
-	focus() {
-		this.ladderWrapper.scrollTo(0, this.level[this.levelIndex].active * 40)
-	}
-	
-	restart() {
-		clearInterval(this.gameTimer)
-		this.playSound('restart')
-		this.levelIndex = 1
-		this.blocked = false
-		this.gameover = false
-		this.status('hide', '')
-		
-		this.timer()		
-	}
-	
-	random(min, max) {
-		min = Math.ceil(min);
-		max = Math.floor(max);
-		return Math.floor(Math.random() * (max - min + 1) + min);
-	}	  
-	
-	controls() {
-		window.onkeydown = function(e) { 
-			return !(e.keyCode == 32 && e.target == document.body);
+		//
+		this.keys = [];
+		//
+		this.level = 1;
+		this.levels = {
+			0: {amount: "0", prev: 0, next: 0, blinkSpeed: 0},
+			1: {amount: "15", prev: 0, next: 2, blinkSpeed: 100},
+			2: {amount: "30", prev: 0, next: 3, blinkSpeed: 350},
+			3: {amount: "60", prev: 0, next: 4, blinkSpeed: 350},
+			4: {amount: "120", prev: 0, next: 5, blinkSpeed: 350},
+			5: {amount: "240", prev: 0, next: 6, blinkSpeed: 350},
+			6: {amount: "payout", prev: 6, next: 6, blinkSpeed: 0},
+			7: {amount: "400", prev: 0, next: 8, blinkSpeed: 400},
+			8: {amount: "800", prev: 7, next: 9, blinkSpeed: 400},
+			9: {amount: "1200", prev: 7, next: 10, blinkSpeed: 400},
+			10: {amount: "2000", prev: 8, next: 11, blinkSpeed: 400},
+			11: {amount: "3200", prev: 9, next: 12, blinkSpeed: 400},
+			12: {amount: "5200", prev: 10, next: 13, blinkSpeed: 400},
+			13: {amount: "8400", prev: 11, next: 14, blinkSpeed: 400},
+			14: {amount: "14000", prev: 14, next: 14, blinkSpeed: 0},
 		};
-		document.addEventListener('keydown', (e) => {
-			if(e.key != ' ') return;
-			if(this.cooldown) return;
-			if(this.gameover) return this.restart();
-			if(this.blocked) return;
-			clearTimeout(this.cooldownTimer)
-			this.cooldown = true
-			this.cooldownTimer = setTimeout(() => { this.cooldown = false }, 400)
-			
-			this.setState('unselect', this.level[this.levelIndex].active)
-			this.setState('unselect', this.level[this.levelIndex].prev)
-			this.setState('unselect', this.level[this.levelIndex].loose)
-			this.setState('unselect', this.level[this.levelIndex].win)
-			this.logic()
-			
-		})
-	}
-	
-	disableScrolling() {
-		var disableScrolling = function (e) {
-			e.stopPropagation()
-			e.preventDefault()
-			
-			return false
-		}
-		this.ladderWrapper.addEventListener('scroll', disableScrolling, false)
-		this.ladderWrapper.addEventListener('touchmove', disableScrolling, false)
-		this.ladderWrapper.addEventListener('wheel', disableScrolling, false)
+		this.audios = [];
+		this.audioFiles = {
+			soundtrack: {
+				url: "./assets/audio/merkur/soundtrack.mp3",
+				loop: true,
+				volume: 0.1,
+			},
+			jackpot: {
+				url: "./assets/audio/merkur/jackpot.mp3",
+				loop: false,
+				volume: 1,
+			},
+			payout: {
+				url: "./assets/audio/merkur/payout.mp3",
+				loop: false,
+				volume: 0.4,
+			},
+			smallUp: {
+				url: "./assets/audio/merkur/smallUp.mp3",
+				loop: false,
+				volume: 0.3,
+			},
+			smallDown: {
+				url: "./assets/audio/merkur/smallDown.mp3",
+				loop: false,
+				volume: 0.3,
+			},
+			bigUp: {
+				url: "./assets/audio/merkur/bigUp.mp3",
+				loop: false,
+				volume: 0.3,
+			},
+			bigDown: {
+				url: "./assets/audio/merkur/bigDown.mp3",
+				loop: false,
+				volume: 0.3,
+			},
+			dropToZero: {
+				url: "./assets/audio/merkur/dropToZero.mp3",
+				loop: false,
+				volume: 0.25,
+			},
+			fallDown: {
+				url: "./assets/audio/merkur/fallDown.mp3",
+				loop: false,
+				volume: 0.3,
+			},
+			levelUp: {
+				url: "./assets/audio/merkur/levelUp2.mp3",
+				loop: false,
+				volume: 0.35,
+			},
+		};
+		// Initialize
+		this.init();
 	}
 
-	logic() {
-		if(this.random(0, 1000) > this.chance) {
-			this.levelIndex ++
-			this.playSound('levelUp')
-		} else {
-			if (this.level[this.levelIndex].loose == 14) {
-				this.levelIndex = 0
-			} else {
-				this.levelIndex --
+	init() {
+		// Register Controls
+		this.controls();
+		// Start timers
+		this.blinkTimer();
+		// focus
+		this.focus();
+		//
+		this.activeLevel();
+		// Load audios
+		this.loadAudios();
+		this.playAudio("soundtrack");
+		this.toggleSound();
+	}
+
+	blinkTimer() {
+		if (!this.blinkCooldown) {
+			this.blink();
+		}
+		setTimeout(() => {
+			this.blinkTimer();
+		}, this.levels[this.level].blinkSpeed);
+	}
+
+	controls() {
+		document.onkeydown = (e) => {
+			if (e.key == " ") {
+				if (this.controlsLocked) return;
+				this.controlsLocked = true;
+				setTimeout(() => {
+					this.controlsLocked = false;
+				}, this.controlsCooldown);
+
+				return this.play();
 			}
-			this.playSound('levelDown')
+
+			if (e.key == "r") {
+				return this.restart();
+			}
+			// this.keys[e.key] = true;
+		};
+	}
+
+	gameState(state) {
+		switch (state) {
+			case "game-over":
+				this.notGameOver = false;
+				this.locked = true;
+				console.log("game-over");
+				this.activeLevel(0);
+				this.stopAudio("soundtrack");
+				this.playAudio("dropToZero");
+				setTimeout(() => {
+					this.restart();
+				}, 1000);
+				break;
+			case "payout":
+				this.locked = true;
+				this.wave();
+				this.stopAudio("soundtrack");
+				this.playAudio("payout");
+				let waveIntervalCount = 0;
+				let waveInterval = setInterval(() => {
+					waveIntervalCount++;
+					this.wave();
+					if (waveIntervalCount == 3) {
+						clearInterval(waveInterval);
+						setTimeout(() => {
+							this.level = 7;
+							this.locked = false;
+							this.activeLevel();
+							this.playAudio("soundtrack");
+						}, 500);
+					}
+				}, 550);
+
+				break;
+			case "win":
+				this.locked = true;
+				this.site.style.background = "rgba(0,0,0,0.5)";
+				this.jackpotInterval = setInterval(() => {
+					this.ladderLevels[this.level].classList.toggle(
+						"active",
+						(this.jackpotBoolean = !this.jackpotBoolean)
+					);
+				}, 200);
+				this.stopAudio("soundtrack");
+				this.playAudio("jackpot");
+				setTimeout(() => {
+					start_fireworks();
+				}, 1500);
+				setTimeout(() => {
+					this.locked = false;
+					this.restart();
+				}, 26000);
+				break;
 		}
 	}
 
-	playSound( soundName ) {
-		if(!this.soundsEnabled) return;
-		let sound = new Audio(this.sounds[soundName])
-		sound.volume = 0.1
-		sound.play()
-		setTimeout(() => { sound = null}, 300)
+	check(level) {
+		switch (level) {
+			case 0:
+				this.gameState("game-over");
+				break;
+
+			case 6:
+				this.gameState("payout");
+				break;
+
+			case 14:
+				this.gameState("win");
+				break;
+		}
+	}
+
+	play() {
+		if (this.locked) return;
+		if (!this.notGameOver) return;
+
+		let prevLevel = this.levels[this.level].prev;
+		let nextLevel = this.levels[this.level].next;
+		let oldLevel = this.level;
+		// Main game logic
+		if (this.random(this.chance)) {
+			// change to 0.5
+			this.level = nextLevel;
+			if (nextLevel != 6 && nextLevel != 14) {
+				this.playAudio("levelUp", true);
+			}
+		} else {
+			this.level = prevLevel;
+			if (prevLevel > 0) this.playAudio("fallDown", true);
+		}
+		this.focus();
+		this.check(this.level);
+		this.clear();
+		this.activeLevel();
+
+		setTimeout(() => {
+			this.blinkCooldown = false;
+		}, 200);
+
+		this.blinkCooldown = true;
+		// animate here
+	}
+
+	activeLevel(level) {
+		level = level || this.level;
+		this.ladderLevels[level].classList.add("active");
+	}
+
+	blink() {
+		let prevLevel = this.levels[this.level].prev;
+		let nextLevel = this.levels[this.level].next;
+		let oldLevel = this.level;
+
+		if (this.locked) return;
+		if (!this.notGameOver) return;
+
+		this.ladderLevels[prevLevel].classList.toggle(
+			"active",
+			(this.blinkBoolOne = !this.blinkBoolOne)
+		);
+
+		this.ladderLevels[nextLevel].classList.toggle(
+			"active",
+			(this.blinkBoolSecond = !this.blinkBoolSecond)
+		);
+
+		if (this.level > 1) {
+			if (this.blinkBoolOne) {
+				this.level > 7
+					? this.playAudio("bigUp", true)
+					: this.playAudio("smallDown", true);
+			}
+			if (this.blinkBoolSecond) {
+				this.level > 7
+					? this.playAudio("bigDown", true)
+					: this.playAudio("smallUp", true);
+			}
+		}
+	}
+
+	wave() {
+		this.ladderLevels.forEach((level, index) => {
+			if (index < 6) return;
+			setTimeout(() => {
+				level.classList.add("active");
+				setTimeout(() => {
+					level.classList.remove("active");
+				}, 35 * index);
+			}, 30 * index);
+		});
+	}
+
+	clear(exludedLevel) {
+		exludedLevel = exludedLevel || this.level;
+		this.ladderLevels.forEach((level) => {
+			if (level !== exludedLevel) {
+				level.classList.remove("active");
+			}
+		});
+	}
+
+	focus(level) {
+		level = level || this.level;
+		this.ladderLevels[level].scrollIntoView({
+			behavior: "smooth",
+			block: "center",
+			inline: "center",
+		});
+	}
+
+	random(chance) {
+		return Math.random() < chance;
+	}
+
+	restart() {
+		this.status("hide");
+		if (this.locked && this.notGameOver) return;
+		this.notGameOver = true;
+		this.stopAllAudios();
+		this.site.style.background = "none";
+		clearInterval(this.jackpotInterval);
+		this.level = 1;
+		this.locked = false;
+		this.clear();
+		this.activeLevel();
+		this.focus();
+		this.playAudio("soundtrack");
+
+		stop_fireworks();
+	}
+
+	status(action, text, subText = "") {
+		var status = document.querySelector("#status");
+		var statusText = document.querySelector("#statusText");
+		var statusSubText = document.querySelector("#statusSubText");
+		var statusButton = document.querySelector("#statusButton");
+
+		switch (action) {
+			case "hide":
+				status.style.marginLeft = "-100%";
+				break;
+			case "show":
+				this.statusIsVisible = true;
+				status.style.marginLeft = "0";
+				statusText.innerText = text;
+				statusSubText.innerText = subText;
+				statusButton.onclick = () => {
+					this.restart();
+				};
+				break;
+		}
+	}
+
+	loadAudios() {
+		for (const [name, audio] of Object.entries(this.audioFiles)) {
+			this[name] = new Audio(audio.url);
+			this[name].loop = audio.loop;
+			this[name].volume = audio.volume;
+			this.audios.push({name: name, sound: this[name]});
+		}
+	}
+
+	playAudio(name, async = false) {
+		if (!this.soundsEnabled) return;
+		if (async) {
+			let asyncAudio = new Audio(this.audioFiles[name].url);
+			asyncAudio.volume = this.audioFiles[name].volume;
+			asyncAudio.play();
+			asyncAudio.remove();
+			setTimeout(() => {
+				asyncAudio.pause();
+				asyncAudio.remove();
+			}, 1000);
+			return;
+		}
+		this.audios.forEach((audio) => {
+			if (audio.name === name) {
+				audio.sound.play();
+			}
+		});
+	}
+
+	stopAudio(name) {
+		this.audios.forEach((audio) => {
+			if (audio.name === name) {
+				audio.sound.pause();
+				audio.sound.currentTime = 0;
+			}
+		});
+	}
+
+	stopAllAudios() {
+		this.audios.forEach((audio) => {
+			audio.sound.pause();
+			audio.sound.currentTime = 0;
+		});
 	}
 
 	toggleSound() {
-		var toggleSound = document.querySelector('#toggleSound')
-		this.playSound('toggle')
-
-		toggleSound.addEventListener('click', () => {
-			if(this.soundsEnabled) {
-				this.soundsEnabled = false
-				toggleSound.style.backgroundImage = "url('../assets/img/mute.svg')"
+		var toggleSound = document.querySelector("#toggleSound");
+		console.log("asdasd");
+		toggleSound.addEventListener("click", () => {
+			if (this.soundsEnabled) {
+				this.soundsEnabled = false;
+				toggleSound.style.backgroundImage = "url('./assets/img/unmute.svg')";
+				this.stopAllAudios();
 			} else {
-				this.soundsEnabled = true
-				toggleSound.style.backgroundImage = "url('../assets/img/unmute.svg')"
+				this.soundsEnabled = true;
+				toggleSound.style.backgroundImage = "url('./assets/img/mute.svg')";
+				this.playAudio("soundtrack");
 			}
-		})
+		});
 	}
 }
 
